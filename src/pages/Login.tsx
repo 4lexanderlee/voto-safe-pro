@@ -8,6 +8,7 @@ import { Shield, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { completeLoginHelper } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const Login = () => {
   const [dni, setDni] = useState('');
@@ -132,15 +133,21 @@ const Login = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="pin">PIN (4 dígitos)</Label>
-                  <Input
-                    id="pin"
-                    type="password"
-                    placeholder="****"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    maxLength={4}
-                    required
-                  />
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={4}
+                      value={pin}
+                      onChange={(value) => setPin(value)}
+                      required
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -175,15 +182,21 @@ const Login = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="code">Código de Verificación</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    placeholder="****"
-                    value={userCode}
-                    onChange={(e) => setUserCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    maxLength={4}
-                    required
-                  />
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={4}
+                      value={userCode}
+                      onChange={(value) => setUserCode(value)}
+                      required
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">

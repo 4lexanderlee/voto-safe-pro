@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { completeLoginHelper } from '@/contexts/AuthContext';
+// import { completeLoginHelper } from '@/contexts/AuthContext'; // <-- ELIMINAR ESTA LÍNEA
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -18,7 +18,7 @@ const Login = () => {
   const [step, setStep] = useState<'credentials' | 'verification'>('credentials');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, verifyCode } = useAuth();
+  const { login, verifyCode, completeLogin } = useAuth(); // <-- AÑADIR completeLogin
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -59,7 +59,8 @@ const Login = () => {
 
     try {
       if (verifyCode(userCode, tempCode)) {
-        const user = completeLoginHelper(dni);
+        // const user = completeLoginHelper(dni); // <-- CAMBIAR ESTA LÍNEA
+        const user = completeLogin(dni); // <-- POR ESTA LÍNEA
         
         if (user) {
           toast({

@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (dni: string, pin: string) => Promise<{ success: boolean; tempCode?: string; error?: string }>;
   logout: () => void;
   verifyCode: (code: string, expectedCode: string) => boolean;
+  completeLogin: (dni: string) => User | null; // <-- AÑADIDO
   register: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>;
   updateUser: (userData: Partial<User>) => void;
   sessionTimeRemaining: number;
@@ -78,7 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const completeLogin = (dni: string) => {
+  // ESTA ES LA NUEVA FUNCIÓN QUE SÍ ACTUALIZA EL ESTADO
+  const completeLogin = (dni: string): User | null => {
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
     const foundUser = users.find((u: User) => u.dni === dni);
@@ -92,9 +94,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       localStorage.setItem('authSession', JSON.stringify(session));
-      setUser(foundUser);
+      setUser(foundUser); // <-- ¡LA LÍNEA CLAVE QUE FALTABA!
       setSessionTimeRemaining(SESSION_TIMEOUT / 1000);
+      return foundUser;
     }
+    return null;
   };
 
   const logout = () => {
@@ -165,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         verifyCode,
+        completeLogin, // <-- AÑADIDO
         register,
         updateUser,
         sessionTimeRemaining
@@ -183,22 +188,4 @@ export const useAuth = () => {
   return context;
 };
 
-// Helper function to complete login after verification
-export const completeLoginHelper = (dni: string) => {
-  const storedUsers = localStorage.getItem('users');
-  const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
-  const foundUser = users.find((u: User) => u.dni === dni);
-  
-  if (foundUser) {
-    const now = Date.now();
-    const session: AuthSession = {
-      user: foundUser,
-      loginTime: now,
-      expiresAt: now + SESSION_TIMEOUT
-    };
-    
-    localStorage.setItem('authSession', JSON.stringify(session));
-    return foundUser;
-  }
-  return null;
-};
+// LA FUNCIÓN "completeLoginHelper" QUE ESTABA AQUÍ ABAJO DEBE SER ELIMINADA

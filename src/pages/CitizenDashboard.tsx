@@ -1,21 +1,25 @@
+// src/pages/CitizenDashboard.tsx
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockElection } from '@/lib/mockData';
-import { Vote } from '@/types';
+// import { mockElection } from '@/lib/mockData'; // Ya no se necesita aquí
+// import { Vote } from '@/types'; // Ya no se necesita aquí
 import { Shield, LogOut, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Ya no se necesita aquí
 import ChatBot from '@/components/ChatBot';
 import TermsModal from '@/components/TermsModal';
+import VotingInterface from '@/components/VotingInterface'; // <-- IMPORTAR
+import VoteCompletedMessage from '@/components/VoteCompletedMessage'; // <-- IMPORTAR
 
 const CitizenDashboard = () => {
-  const { user, logout, sessionTimeRemaining, updateUser } = useAuth();
+  const { user, logout, sessionTimeRemaining } = useAuth(); // Se quita updateUser
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [selectedVotes, setSelectedVotes] = useState<Record<string, string>>({});
+  // const { toast } = useToast(); // Se quita toast
+  // const [selectedVotes, setSelectedVotes] = useState<Record<string, string>>({}); // Se quita selectedVotes
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
@@ -25,68 +29,18 @@ const CitizenDashboard = () => {
       return;
     }
 
-    // Check if terms have been accepted
     const termsAccepted = localStorage.getItem('termsAccepted');
     if (!termsAccepted) {
       setShowTerms(true);
     }
 
-    // Check if user has already voted
     if (user.hasVoted) {
       setHasSubmitted(true);
     }
   }, [user, navigate]);
 
-  const handleVoteSelection = (categoryId: string, candidateId: string) => {
-    if (hasSubmitted) return;
-    
-    setSelectedVotes(prev => ({
-      ...prev,
-      [categoryId]: candidateId
-    }));
-  };
-
-  const handleSubmitVote = () => {
-    if (Object.keys(selectedVotes).length !== mockElection.categorias.length) {
-      toast({
-        variant: 'destructive',
-        title: 'Votación incompleta',
-        description: 'Debes votar en todas las categorías antes de enviar',
-      });
-      return;
-    }
-
-    // Save vote
-    const vote: Vote = {
-      userId: user!.dni,
-      electionId: mockElection.id,
-      fecha: new Date().toISOString(),
-      votos: Object.entries(selectedVotes).map(([categoria, candidatoId]) => {
-        const cat = mockElection.categorias.find(c => c.id === categoria);
-        const candidate = cat?.candidatos.find(c => c.id === candidatoId);
-        return {
-          categoria,
-          candidatoId,
-          partido: candidate?.partido || ''
-        };
-      })
-    };
-
-    // Save to localStorage
-    const existingVotes = localStorage.getItem('votes');
-    const votes = existingVotes ? JSON.parse(existingVotes) : [];
-    votes.push(vote);
-    localStorage.setItem('votes', JSON.stringify(votes));
-
-    // Update user status
-    updateUser({ hasVoted: true });
-    setHasSubmitted(true);
-
-    toast({
-      title: '¡Voto registrado exitosamente!',
-      description: 'Tu voto ha sido procesado de forma segura',
-    });
-  };
+  // Se elimina handleVoteSelection
+  // Se elimina handleSubmitVote
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -155,77 +109,16 @@ const CitizenDashboard = () => {
       <div className="container mx-auto px-4 pb-8">
         <Card>
           <CardHeader>
-            <CardTitle>{mockElection.nombre}</CardTitle>
+            <CardTitle>Elecciones Generales 2025</CardTitle>
             <CardDescription>
               Selecciona un candidato por cada categoría electoral
             </CardDescription>
           </CardHeader>
           <CardContent>
             {hasSubmitted ? (
-              <div className="text-center py-12">
-                <CheckCircle2 className="h-16 w-16 text-success mx-auto mb-4" />
-                <h3 className="text-2xl font-bold mb-2">¡Gracias por participar!</h3>
-                <p className="text-muted-foreground">
-                  Tu voto ha sido registrado de forma segura y anónima
-                </p>
-              </div>
+              <VoteCompletedMessage /> // <-- USAR COMPONENTE
             ) : (
-              <div className="space-y-8">
-                {mockElection.categorias.map((categoria) => (
-                  <div key={categoria.id} className="space-y-4">
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <h3 className="text-lg font-bold text-foreground">{categoria.nombre}</h3>
-                      {selectedVotes[categoria.id] && (
-                        <Badge variant="outline" className="bg-success/10 text-success border-success">
-                          Seleccionado
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {categoria.candidatos.map((candidato) => {
-                        const isSelected = selectedVotes[categoria.id] === candidato.id;
-                        return (
-                          <button
-                            key={candidato.id}
-                            onClick={() => handleVoteSelection(categoria.id, candidato.id)}
-                            className={`p-4 rounded-lg border-2 transition-all text-left hover:shadow-lg ${
-                              isSelected
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="text-3xl">{candidato.simbolo}</div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-foreground mb-1">
-                                  {candidato.nombre}
-                                </h4>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  {candidato.partido}
-                                </p>
-                                {isSelected && (
-                                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                <div className="flex justify-end pt-6">
-                  <Button
-                    size="lg"
-                    onClick={handleSubmitVote}
-                    disabled={Object.keys(selectedVotes).length !== mockElection.categorias.length}
-                  >
-                    Enviar Voto
-                  </Button>
-                </div>
-              </div>
+              <VotingInterface onVoteSubmitted={() => setHasSubmitted(true)} /> // <-- USAR COMPONENTE
             )}
           </CardContent>
         </Card>

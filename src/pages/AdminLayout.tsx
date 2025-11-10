@@ -1,9 +1,8 @@
 // src/pages/AdminLayout.tsx
 
-import { Outlet, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, LogOut, BarChart3, Users, Vote, FileText } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Users, Vote, FileText, Loader2 } from 'lucide-react'; // <-- CAMBIO: Añadir Loader2
 import { NavLink } from '@/components/NavLink';
 import {
   SidebarProvider,
@@ -27,7 +26,7 @@ const adminNavLinks = [
 ];
 
 const AdminLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth(); // <-- CAMBIO: Obtener isLoading
   const location = useLocation();
 
   // Esta lógica determinará qué pestaña mostrar en AdminDashboard
@@ -39,11 +38,33 @@ const AdminLayout = () => {
     return "estadisticas";
   };
 
+  // --- CORRECCIÓN PANTALLA EN BLANCO ---
+  
+  // 1. Mostrar estado de carga mientras se verifica la sesión
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // 2. Si NO está cargando Y NO está autenticado, redirigir
+  if (!isAuthenticated || !user) {
+     return <Navigate to="/login" replace />;
+  }
+  
+  // 3. Si está autenticado pero no es admin, redirigir
+  if (user.role !== 'admin') {
+     return <Navigate to="/" replace />;
+  }
+  // --- FIN CORRECCIÓN ---
+
+  // 4. Si todo pasó, mostrar el layout
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
         
-        {/* --- BARRA LATERAL ESTÁTICA --- */}
         <Sidebar
           variant="sidebar" 
           collapsible="icon"
@@ -60,7 +81,6 @@ const AdminLayout = () => {
             </div>
           </SidebarHeader>
 
-          {/* --- NAVEGACIÓN PRINCIPAL --- */}
           <SidebarContent>
             <SidebarMenu>
               {adminNavLinks.map((link) => (
@@ -80,12 +100,9 @@ const AdminLayout = () => {
             </SidebarMenu>
           </SidebarContent>
 
-          {/* --- PIE DE PÁGINA DE SIDEBAR (USUARIO Y LOGOUT) --- */}
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                {/* --- CORRECCIÓN AQUÍ --- */}
-                {/* Se eliminó variant="ghost" que causaba el error */}
                 <SidebarMenuButton 
                   onClick={logout} 
                   className="text-destructive-foreground/70 hover:bg-destructive/20 hover:text-destructive"
@@ -99,9 +116,7 @@ const AdminLayout = () => {
           </SidebarFooter>
         </Sidebar>
 
-        {/* --- CONTENIDO PRINCIPAL DE LA PÁGINA --- */}
         <SidebarInset className="flex-1 overflow-y-auto">
-          {/* Pasamos el 'activeTab' al Outlet (AdminDashboard) */}
           <Outlet context={{ activeTab: getActiveTab() }} />
         </SidebarInset>
 

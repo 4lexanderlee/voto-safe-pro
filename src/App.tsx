@@ -35,13 +35,13 @@ const App = () => (
             {/* Ruta de Ciudadano */}
             <Route path="/dashboard" element={<CitizenDashboard />} />
             
-            {/* Rutas de Admin */}
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/votantes" element={<AdminDashboard />} />
-              <Route path="/admin/elecciones" element={<AdminDashboard />} />
-              <Route path="/admin/elecciones/:electionId" element={<AdminElectionDetails />} />
-              <Route path="/admin/cedula" element={<AdminDashboard />} />
+            {/* Rutas de Admin (ruta padre /admin con rutas hijas relativas) */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="votantes" element={<AdminDashboard />} />
+              <Route path="elecciones" element={<AdminDashboard />} />
+              <Route path="elecciones/:electionId" element={<AdminElectionDetails />} />
+              <Route path="cedula" element={<AdminDashboard />} />
             </Route>
             
             {/* Ruta Catch-all */}

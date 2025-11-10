@@ -112,10 +112,10 @@ export const ElectionFormModal = ({ open, onClose, onSubmit, initialData }: Elec
       categorias: fullCategorias,
       activa: true, // Por defecto al crearla
     };
-    
+
     onSubmit(finalData);
     onClose();
-  }; // <--- ¡EL CIERRE "};" DE handleFormSubmit VA AQUÍ!
+  }; // <--- ¡LA LLAVE DE CIERRE "};" DE handleFormSubmit VA AQUÍ!
 
   return ( // <--- El return estaba dentro de handleFormSubmit, ahora está fuera
     <Dialog open={open} onOpenChange={onClose}>
@@ -336,4 +336,4 @@ export const ElectionFormModal = ({ open, onClose, onSubmit, initialData }: Elec
     </Dialog>
   );
 };
-// NO hay "};" extra al final
+// El "};" extra que tenías al final ya no está.

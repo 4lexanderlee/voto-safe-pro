@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthSession, Vote } from '@/types'; // <-- Asegúrate que 'Vote' esté importado
+import { User, AuthSession, Vote } from '@/types';
 import { mockUsers } from '@/lib/mockData';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean; // <-- CAMBIO: Añadido
   login: (dni: string, pin: string) => Promise<{ success: boolean; tempCode?: string; error?: string }>;
   logout: () => void;
   verifyCode: (code: string, expectedCode: string) => boolean;
-  completeLogin: (dni: string) => User | null; // <-- FUNCIÓN IMPORTANTE
+  completeLogin: (dni: string) => User | null;
   register: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>;
   updateUser: (userData: Partial<User>) => void;
   submitVote: (vote: Vote) => void;
@@ -22,21 +23,31 @@ const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true); // <-- CAMBIO: Añadido (inicia en true)
 
   // Cargar sesión desde localStorage al iniciar
   useEffect(() => {
-    const storedSession = localStorage.getItem('authSession');
-    if (storedSession) {
-      const session: AuthSession = JSON.parse(storedSession);
-      const now = Date.now();
-      
-      if (session.expiresAt > now) {
-        setUser(session.user);
-        setSessionTimeRemaining(Math.floor((session.expiresAt - now) / 1000));
-      } else {
-        localStorage.removeItem('authSession');
+    // <-- CAMBIO: Lógica de carga actualizada -->
+    try {
+      const storedSession = localStorage.getItem('authSession');
+      if (storedSession) {
+        const session: AuthSession = JSON.parse(storedSession);
+        const now = Date.now();
+        
+        if (session.expiresAt > now) {
+          setUser(session.user);
+          setSessionTimeRemaining(Math.floor((session.expiresAt - now) / 1000));
+        } else {
+          localStorage.removeItem('authSession');
+        }
       }
+    } catch (e) {
+      console.error("Error al cargar sesión:", e);
+      localStorage.removeItem('authSession');
+    } finally {
+      setIsLoading(false); // <-- CAMBIO: Marcar como cargado
     }
+    // <-- FIN CAMBIO -->
   }, []);
 
   // Temporizador de sesión
@@ -54,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(interval);
   }, [user]);
 
-  // Paso 1: Login (solo verifica credenciales)
+  // Paso 1: Login (sin cambios)
   const login = async (dni: string, pin: string): Promise<{ success: boolean; tempCode?: string; error?: string }> => {
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
@@ -67,13 +78,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, tempCode };
   };
 
-  // Paso 2: Verificar 2FA
+  // Paso 2: Verificar 2FA (sin cambios)
   const verifyCode = (code: string, expectedCode: string): boolean => {
     return code === expectedCode;
   };
 
-  // --- CORRECCIÓN CLAVE ---
-  // Paso 3: Completar Login (actualiza estado y localStorage)
+  // Paso 3: Completar Login
   const completeLogin = (dni: string): User | null => {
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
@@ -88,8 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       localStorage.setItem('authSession', JSON.stringify(session));
-      setUser(foundUser); // <-- ESTA LÍNEA ES LA QUE FALTA. Actualiza el estado de React.
+      
+      setUser(foundUser);
       setSessionTimeRemaining(SESSION_TIMEOUT / 1000);
+      setIsLoading(false); // <-- CAMBIO: Añadido
       return foundUser;
     }
     return null;
@@ -101,11 +113,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionTimeRemaining(0);
   };
 
-  // (El resto de funciones register, updateUser, submitVote... se quedan igual que en el paso anterior)
   const register = async (userData: Partial<User>): Promise<{ success: boolean; error?: string }> => {
     try {
       const storedUsers = localStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
+      let users = storedUsers ? JSON.parse(storedUsers) : [...mockUsers];
       
       if (users.find((u: User) => u.dni === userData.dni)) {
         return { success: false, error: 'El DNI ya está registrado' };
@@ -122,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sexo: userData.sexo!,
         fechaNacimiento: userData.fechaNacimiento!,
         role: 'ciudadano',
-        votedIn: [],
+        votedIn: [], 
         termsAccepted: userData.termsAccepted || false
       };
 
@@ -166,17 +177,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     updateUser(updatedUser);
   };
-  // --- FIN DE FUNCIONES ---
 
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
+        isLoading, // <-- CAMBIO: Añadido
         login,
         logout,
         verifyCode,
-        completeLogin, // <-- expuesto
+        completeLogin,
         register,
         updateUser,
         submitVote,

@@ -8,9 +8,6 @@ import { ArrowLeft } from 'lucide-react';
 const AdminElectionDetails = () => {
   const { electionId } = useParams();
 
-  // En un futuro, aquí cargarías los datos de la elección usando el electionId
-  // const election = ...
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">

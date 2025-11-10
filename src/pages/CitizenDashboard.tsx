@@ -1,44 +1,50 @@
 // src/pages/CitizenDashboard.tsx
-
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockElection } from '@/lib/mockData';
-import { Election } from '@/types'; // <-- CAMBIO
-import { Shield, LogOut, Clock, CheckCircle2, AlertCircle, FileText, Calendar, BarChart3 } from 'lucide-react'; // <-- CAMBIO
+import { Election } from '@/types';
+import { Shield, LogOut, Clock, CheckCircle2, AlertCircle, CalendarDays, Flag, FileText } from 'lucide-react';
 import ChatBot from '@/components/ChatBot';
 import TermsModal from '@/components/TermsModal';
-import VotingInterface from '@/components/VotingInterface';
-import VoteCompletedMessage from '@/components/VoteCompletedMessage';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const CitizenDashboard = () => {
-  const { user, logout, sessionTimeRemaining } = useAuth();
+  const { user, logout, sessionTimeRemaining, isLoading } = useAuth();
   const navigate = useNavigate();
   const [showTerms, setShowTerms] = useState(false);
-  const [elections, setElections] = useState<Election[]>([]);
-  
-  // CAMBIO: Controla qué elección se está votando
-  const [selectedElection, setSelectedElection] = useState<Election | null>(null);
+  const [activeElections, setActiveElections] = useState<Election[]>([]);
 
   useEffect(() => {
+    if (isLoading) return; // Esperar a que la autenticación cargue
+
     if (!user) {
       navigate('/login');
       return;
     }
-    
-    // Cargar elecciones desde localStorage
-    const storedElections = localStorage.getItem('elections');
-    setElections(storedElections ? JSON.parse(storedElections) : [mockElection]);
 
+    // Check if terms have been accepted
     const termsAccepted = localStorage.getItem('termsAccepted');
     if (!termsAccepted) {
       setShowTerms(true);
     }
-  }, [user, navigate]);
 
+    // Cargar y filtrar elecciones
+    const allElections: Election[] = JSON.parse(localStorage.getItem('elections') || '[]');
+    const now = new Date();
+    const active = allElections.filter(election => {
+      const startDate = new Date(election.fechaInicio);
+      const endDate = new Date(election.fechaFin);
+      // Incluir 'activa' y también 'pendiente' para que el usuario las vea venir
+      return (election.estado === 'activa' || election.estado === 'pendiente') && now < endDate;
+    });
+    
+    setActiveElections(active);
+
+  }, [user, navigate, isLoading]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -46,77 +52,42 @@ const CitizenDashboard = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleVoteSubmission = () => {
-    // Cuando el voto se envía, volvemos a la lista
-    setSelectedElection(null);
+  if (isLoading || !user) return null; // Esperar a que el usuario esté cargado
+
+  const getStatusInfo = (election: Election): { text: string; icon: React.ReactNode; color: string; canVote: boolean } => {
+    const now = new Date();
+    const startDate = new Date(election.fechaInicio);
+    const hasVoted = user.votedElectionIds.includes(election.id);
+
+    if (hasVoted) {
+      return {
+        text: 'Completado',
+        icon: <CheckCircle2 className="h-4 w-4 mr-1" />,
+        color: 'bg-success text-success-foreground',
+        canVote: false,
+      };
+    }
+    if (now < startDate) {
+      return {
+        text: 'Pendiente (Aún no inicia)',
+        icon: <AlertCircle className="h-4 w-4 mr-1" />,
+        color: 'bg-blue-100 text-blue-800',
+        canVote: false,
+      };
+    }
+    // Si está activa y no ha votado
+    return {
+      text: 'Pendiente',
+      icon: <AlertCircle className="h-4 w-4 mr-1" />,
+      color: 'bg-warning text-warning-foreground',
+      canVote: true,
+    };
   };
 
-  if (!user) return null;
-  
-  // --- VISTA DE VOTACIÓN ---
-  if (selectedElection) {
-    const hasVotedInThis = user.votedIn.includes(selectedElection.id);
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted">
-        {/* Header (se mantiene igual) */}
-        <header /* ... */ >
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="h-8 w-8 text-primary" />
-                <div>
-                  <h1 className="text-xl font-bold text-primary">Voto Safe</h1>
-                  <p className="text-xs text-muted-foreground">Portal del Ciudadano</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-mono text-foreground">{formatTime(sessionTimeRemaining)}</span>
-                </div>
-                <Button variant="outline" size="sm" onClick={logout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Salir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
-        
-        {/* Contenido de Votación */}
-        <div className="container mx-auto px-4 pb-8 py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{selectedElection.nombre}</CardTitle>
-              <CardDescription>
-                Selecciona un candidato por cada categoría electoral
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {hasVotedInThis ? (
-                <VoteCompletedMessage />
-              ) : (
-                <VotingInterface 
-                  election={selectedElection} 
-                  onVoteSubmitted={handleVoteSubmission} 
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        <ChatBot />
-        <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
-      </div>
-    );
-  }
-
-  // --- VISTA DE LISTA DE ELECCIONES (POR DEFECTO) ---
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
-      {/* Header (se mantiene igual) */}
-      <header /* ... */ >
+      {/* Header */}
+      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -126,6 +97,7 @@ const CitizenDashboard = () => {
                 <p className="text-xs text-muted-foreground">Portal del Ciudadano</p>
               </div>
             </div>
+            
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -156,61 +128,56 @@ const CitizenDashboard = () => {
         </Card>
       </div>
 
-      {/* CAMBIO: Lista de Elecciones */}
+      {/* Voting Section - Lista de Cédulas */}
       <div className="container mx-auto px-4 pb-8">
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Elecciones Disponibles</h2>
-          {elections.filter(e => e.activa).length > 0 ? (
-            elections.filter(e => e.activa).map(election => {
-              const hasVoted = user.votedIn.includes(election.id);
+          <h2 className="text-2xl font-semibold">Cédulas de Votación Disponibles</h2>
+          {activeElections.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No hay elecciones activas o programadas en este momento.
+            </p>
+          ) : (
+            activeElections.map(election => {
+              const status = getStatusInfo(election);
               return (
-                <button
-                  key={election.id}
-                  className="w-full border-2 border-primary/20 rounded-lg p-5 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40 transition-colors text-left"
-                  onClick={() => setSelectedElection(election)}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="font-bold text-lg">{election.nombre}</h3>
-                    {hasVoted ? (
-                      <Badge className="bg-success/10 text-success hover:bg-success/20">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Completado
+                <Card key={election.id} className="shadow-md">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <Flag className="h-5 w-5 text-primary" />
+                        {election.nombre}
+                      </CardTitle>
+                      <Badge className={cn("text-xs", status.color)}>
+                        {status.icon}
+                        {status.text}
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-warning text-warning hover:bg-warning/20">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Pendiente
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Tipo</span>
-                        <span className="font-medium">{election.tipo}</span>
-                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Categorías</span>
-                        <span className="font-medium">{election.categorias.length} categorías</span>
-                      </div>
+                    <CardDescription>{election.tipo}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4 mr-2" />
+                      <span>Disponible del {format(new Date(election.fechaInicio), 'dd/MM/yyyy')} al {format(new Date(election.fechaFin), 'dd/MM/yyyy')}</span>
                     </div>
-                    <div className="flex items-center gap-2 col-span-2 md:col-span-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Fecha</span>
-                        <span className="font-medium">{election.fechaInicio} al {election.fechaFin}</span>
-                      </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4 mr-2" />
+                      <span>{election.categorias.length} categorías a votar</span>
                     </div>
-                  </div>
-                </button>
+                    <div className="flex justify-end pt-4 border-t">
+                      <Button
+                        asChild
+                        disabled={!status.canVote}
+                        size="lg"
+                      >
+                        <Link to={`/votar/${election.id}`}>
+                          {status.canVote ? 'Ir a Votar' : (status.text === 'Completado' ? 'Voto Registrado' : 'No Disponible')}
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })
-          ) : (
-            <p className="text-muted-foreground">No hay elecciones activas en este momento.</p>
           )}
         </div>
       </div>

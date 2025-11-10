@@ -11,7 +11,7 @@ export interface User {
   sexo: 'M' | 'F';
   fechaNacimiento: string;
   role: 'ciudadano' | 'admin';
-  votedIn: string[]; // <-- CAMBIO: de hasVoted: boolean
+  votedElectionIds: string[]; // <--- CAMBIO: de hasVoted: boolean
   termsAccepted: boolean;
 }
 
@@ -24,24 +24,22 @@ export interface Candidate {
   propuestas: string[];
 }
 
-// Interfaz de Categoría actualizada
 export interface ElectionCategory {
   id: string;
-  nombre: string; // <-- CAMBIO: de literales a string
+  nombre: string; 
   candidatos: Candidate[];
 }
 
-// Interfaz de Elección actualizada
 export interface Election {
   id: string;
-  nombre: string;
-  fechaInicio: string;
-  fechaFin: string;
-  tipo: 'Presidencial' | 'Regional' | 'Municipal' | 'Otros'; // <-- CAMBIO: 'Otros' añadido
-  categorias: ElectionCategory[];
-  activa: boolean; // Para saber si se muestra (ej. 'true' por defecto)
-  allowNullVote: boolean; // ¿Permitir voto nulo?
-  requireAllCategories: boolean; // ¿Es necesario marcar todas las casillas?
+  nombre: string; 
+  tipo: 'Presidencial' | 'Municipal' | 'Regional' | 'Otros';
+  categorias: ElectionCategory[]; 
+  fechaInicio: string; 
+  fechaFin: string; 
+  permiteVotoNulo: boolean; 
+  permiteVotoIncompleto: boolean; 
+  estado: 'pendiente' | 'activa' | 'finalizada';
 }
 
 export interface Vote {

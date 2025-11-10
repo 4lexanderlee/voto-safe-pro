@@ -1,5 +1,4 @@
 // src/lib/mockData.ts
-
 import { User, Election, Candidate } from '@/types';
 
 export const mockUsers: User[] = [
@@ -14,7 +13,7 @@ export const mockUsers: User[] = [
     sexo: 'M',
     fechaNacimiento: '1985-05-15',
     role: 'ciudadano',
-    votedIn: [], // <-- CAMBIO: de hasVoted: false
+    votedElectionIds: [], // <--- CAMBIO
     termsAccepted: true
   },
   {
@@ -28,10 +27,13 @@ export const mockUsers: User[] = [
     sexo: 'F',
     fechaNacimiento: '1990-08-22',
     role: 'admin',
-    votedIn: [], // <-- CAMBIO: de hasVoted: false
+    votedElectionIds: [], // <--- CAMBIO
     termsAccepted: true
   }
 ];
+
+// ... (el resto del archivo mockCandidates, mockElection, etc., puede quedar igual o ser eliminado si ya no se usa) ...
+// ... (eliminaremos mockElection de aquí ya que ahora se carga desde localStorage) ...
 
 export const mockCandidates: Candidate[] = [
   {
@@ -50,52 +52,26 @@ export const mockCandidates: Candidate[] = [
     simbolo: '🌟',
     propuestas: ['Inversión en infraestructura', 'Seguridad ciudadana', 'Desarrollo rural']
   },
-  // ... (otros candidatos)
+  {
+    id: 'c3',
+    nombre: 'Roberto Flores',
+    partido: 'Fuerza Popular',
+    foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+    simbolo: '🔷',
+    propuestas: ['Lucha anticorrupción', 'Economía sostenible', 'Tecnología educativa']
+  },
+  {
+    id: 'c4',
+    nombre: 'Ana Martínez',
+    partido: 'Perú Libre',
+    foto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400',
+    simbolo: '✊',
+    propuestas: ['Reforma agraria', 'Nacionalización de recursos', 'Justicia social']
+  }
 ];
 
-// Solo exportamos una elección por defecto. 
-// La lista completa se manejará en localStorage
-export const mockElection: Election = {
-  id: 'e1',
-  tipo: 'Presidencial',
-  nombre: 'Elecciones Generales 2025',
-  fechaInicio: '2025-04-10',
-  fechaFin: '2025-04-10',
-  activa: true,
-  allowNullVote: true, // <-- CAMBIO: añadido
-  requireAllCategories: true, // <-- CAMBIO: añadido
-  categorias: [
-    {
-      id: 'cat1',
-      nombre: 'Presidencia',
-      candidatos: mockCandidates
-    },
-    {
-      id: 'cat2',
-      nombre: 'Senado Nacional',
-      candidatos: mockCandidates.map(c => ({ ...c, id: c.id + '-sn' }))
-    },
-    {
-      id: 'cat3',
-      nombre: 'Senado Regional',
-      candidatos: mockCandidates.map(c => ({ ...c, id: c.id + '-sr' }))
-    },
-    {
-      id: 'cat4',
-      nombre: 'Diputado',
-      candidatos: mockCandidates.map(c => ({ ...c, id: c.id + '-d' }))
-    },
-    {
-      id: 'cat5',
-      nombre: 'Parlamento Andino',
-      candidatos: mockCandidates.map(c => ({ ...c, id: c.id + '-pa' }))
-    }
-  ]
-};
-
-// ... (generateMockUserData se mantiene igual)
+// Simular RENIEC - autocompletar datos al escribir DNI
 export const generateMockUserData = (dni: string) => {
-  // ... (código existente)
   const nombres = ['Juan', 'María', 'Carlos', 'Ana', 'Luis', 'Rosa', 'Pedro', 'Carmen'];
   const apellidosPaternos = ['García', 'López', 'Martínez', 'Rodríguez', 'Pérez', 'González'];
   const apellidosMaternos = ['Silva', 'Torres', 'Flores', 'Ramírez', 'Castro', 'Vargas'];

@@ -1,3 +1,5 @@
+// src/types/index.ts
+
 export interface User {
   dni: string;
   pin: string;
@@ -9,7 +11,7 @@ export interface User {
   sexo: 'M' | 'F';
   fechaNacimiento: string;
   role: 'ciudadano' | 'admin';
-  hasVoted: boolean;
+  votedIn: string[]; // <-- CAMBIO: de hasVoted: boolean
   termsAccepted: boolean;
 }
 
@@ -22,20 +24,24 @@ export interface Candidate {
   propuestas: string[];
 }
 
+// Interfaz de Categoría actualizada
+export interface ElectionCategory {
+  id: string;
+  nombre: string; // <-- CAMBIO: de literales a string
+  candidatos: Candidate[];
+}
+
+// Interfaz de Elección actualizada
 export interface Election {
   id: string;
-  tipo: 'Presidencial' | 'Regional' | 'Municipal';
   nombre: string;
   fechaInicio: string;
   fechaFin: string;
-  activa: boolean;
+  tipo: 'Presidencial' | 'Regional' | 'Municipal' | 'Otros'; // <-- CAMBIO: 'Otros' añadido
   categorias: ElectionCategory[];
-}
-
-export interface ElectionCategory {
-  id: string;
-  nombre: 'Presidencia' | 'Senado Nacional' | 'Senado Regional' | 'Diputado' | 'Parlamento Andino';
-  candidatos: Candidate[];
+  activa: boolean; // Para saber si se muestra (ej. 'true' por defecto)
+  allowNullVote: boolean; // ¿Permitir voto nulo?
+  requireAllCategories: boolean; // ¿Es necesario marcar todas las casillas?
 }
 
 export interface Vote {

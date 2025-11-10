@@ -1,3 +1,5 @@
+// src/lib/mockData.ts
+
 import { User, Election, Candidate } from '@/types';
 
 export const mockUsers: User[] = [
@@ -12,7 +14,7 @@ export const mockUsers: User[] = [
     sexo: 'M',
     fechaNacimiento: '1985-05-15',
     role: 'ciudadano',
-    hasVoted: false,
+    votedIn: [], // <-- CAMBIO: de hasVoted: false
     termsAccepted: true
   },
   {
@@ -26,7 +28,7 @@ export const mockUsers: User[] = [
     sexo: 'F',
     fechaNacimiento: '1990-08-22',
     role: 'admin',
-    hasVoted: false,
+    votedIn: [], // <-- CAMBIO: de hasVoted: false
     termsAccepted: true
   }
 ];
@@ -48,24 +50,11 @@ export const mockCandidates: Candidate[] = [
     simbolo: '🌟',
     propuestas: ['Inversión en infraestructura', 'Seguridad ciudadana', 'Desarrollo rural']
   },
-  {
-    id: 'c3',
-    nombre: 'Roberto Flores',
-    partido: 'Fuerza Popular',
-    foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-    simbolo: '🔷',
-    propuestas: ['Lucha anticorrupción', 'Economía sostenible', 'Tecnología educativa']
-  },
-  {
-    id: 'c4',
-    nombre: 'Ana Martínez',
-    partido: 'Perú Libre',
-    foto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400',
-    simbolo: '✊',
-    propuestas: ['Reforma agraria', 'Nacionalización de recursos', 'Justicia social']
-  }
+  // ... (otros candidatos)
 ];
 
+// Solo exportamos una elección por defecto. 
+// La lista completa se manejará en localStorage
 export const mockElection: Election = {
   id: 'e1',
   tipo: 'Presidencial',
@@ -73,6 +62,8 @@ export const mockElection: Election = {
   fechaInicio: '2025-04-10',
   fechaFin: '2025-04-10',
   activa: true,
+  allowNullVote: true, // <-- CAMBIO: añadido
+  requireAllCategories: true, // <-- CAMBIO: añadido
   categorias: [
     {
       id: 'cat1',
@@ -102,8 +93,9 @@ export const mockElection: Election = {
   ]
 };
 
-// Simular RENIEC - autocompletar datos al escribir DNI
+// ... (generateMockUserData se mantiene igual)
 export const generateMockUserData = (dni: string) => {
+  // ... (código existente)
   const nombres = ['Juan', 'María', 'Carlos', 'Ana', 'Luis', 'Rosa', 'Pedro', 'Carmen'];
   const apellidosPaternos = ['García', 'López', 'Martínez', 'Rodríguez', 'Pérez', 'González'];
   const apellidosMaternos = ['Silva', 'Torres', 'Flores', 'Ramírez', 'Castro', 'Vargas'];

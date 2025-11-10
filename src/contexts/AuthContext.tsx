@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthSession } from '@/types';
+import { User, AuthSession, Vote } from '@/types'; // <-- Asegúrate que 'Vote' esté importado
 import { mockUsers } from '@/lib/mockData';
 
 interface AuthContextType {
@@ -8,9 +8,10 @@ interface AuthContextType {
   login: (dni: string, pin: string) => Promise<{ success: boolean; tempCode?: string; error?: string }>;
   logout: () => void;
   verifyCode: (code: string, expectedCode: string) => boolean;
-  completeLogin: (dni: string) => User | null; // <-- AÑADIDO
+  completeLogin: (dni: string) => User | null; // <-- FUNCIÓN IMPORTANTE
   register: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>;
   updateUser: (userData: Partial<User>) => void;
+  submitVote: (vote: Vote) => void;
   sessionTimeRemaining: number;
 }
 
@@ -22,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number>(0);
 
-  // Initialize from localStorage
+  // Cargar sesión desde localStorage al iniciar
   useEffect(() => {
     const storedSession = localStorage.getItem('authSession');
     if (storedSession) {
@@ -38,10 +39,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Session timeout countdown
+  // Temporizador de sesión
   useEffect(() => {
     if (!user) return;
-
     const interval = setInterval(() => {
       setSessionTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -51,35 +51,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(interval);
   }, [user]);
 
+  // Paso 1: Login (solo verifica credenciales)
   const login = async (dni: string, pin: string): Promise<{ success: boolean; tempCode?: string; error?: string }> => {
-    // Get users from localStorage or use mock
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
-    
     const foundUser = users.find((u: User) => u.dni === dni && u.pin === pin);
     
     if (!foundUser) {
       return { success: false, error: 'DNI o PIN incorrectos' };
     }
-
-    // Generate temporary verification code
     const tempCode = Math.floor(1000 + Math.random() * 9000).toString();
-    
     return { success: true, tempCode };
   };
 
+  // Paso 2: Verificar 2FA
   const verifyCode = (code: string, expectedCode: string): boolean => {
-    if (code === expectedCode) {
-      return true;
-    }
-    return false;
+    return code === expectedCode;
   };
 
-  // ESTA ES LA NUEVA FUNCIÓN QUE SÍ ACTUALIZA EL ESTADO
+  // --- CORRECCIÓN CLAVE ---
+  // Paso 3: Completar Login (actualiza estado y localStorage)
   const completeLogin = (dni: string): User | null => {
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
@@ -94,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       localStorage.setItem('authSession', JSON.stringify(session));
-      setUser(foundUser); // <-- ¡LA LÍNEA CLAVE QUE FALTABA!
+      setUser(foundUser); // <-- ESTA LÍNEA ES LA QUE FALTA. Actualiza el estado de React.
       setSessionTimeRemaining(SESSION_TIMEOUT / 1000);
       return foundUser;
     }
@@ -107,12 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionTimeRemaining(0);
   };
 
+  // (El resto de funciones register, updateUser, submitVote... se quedan igual que en el paso anterior)
   const register = async (userData: Partial<User>): Promise<{ success: boolean; error?: string }> => {
     try {
       const storedUsers = localStorage.getItem('users');
       const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
       
-      // Check if DNI already exists
       if (users.find((u: User) => u.dni === userData.dni)) {
         return { success: false, error: 'El DNI ya está registrado' };
       }
@@ -128,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sexo: userData.sexo!,
         fechaNacimiento: userData.fechaNacimiento!,
         role: 'ciudadano',
-        hasVoted: false,
+        votedIn: [],
         termsAccepted: userData.termsAccepted || false
       };
 
@@ -147,19 +141,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
     
-    const session: AuthSession = {
-      user: updatedUser,
-      loginTime: Date.now(),
-      expiresAt: Date.now() + SESSION_TIMEOUT
-    };
-    localStorage.setItem('authSession', JSON.stringify(session));
+    const storedSession = localStorage.getItem('authSession');
+    if (storedSession) {
+      const session: AuthSession = JSON.parse(storedSession);
+      session.user = updatedUser; 
+      localStorage.setItem('authSession', JSON.stringify(session));
+    }
     
-    // Update in users list
     const storedUsers = localStorage.getItem('users');
     const users = storedUsers ? JSON.parse(storedUsers) : mockUsers;
     const updatedUsers = users.map((u: User) => u.dni === user.dni ? updatedUser : u);
     localStorage.setItem('users', JSON.stringify(updatedUsers));
   };
+
+  const submitVote = (vote: Vote) => {
+    if (!user) return;
+    const existingVotes = localStorage.getItem('votes');
+    const votes = existingVotes ? JSON.parse(existingVotes) : [];
+    votes.push(vote);
+    localStorage.setItem('votes', JSON.stringify(votes));
+    const updatedUser = {
+      ...user,
+      votedIn: [...user.votedIn, vote.electionId]
+    };
+    updateUser(updatedUser);
+  };
+  // --- FIN DE FUNCIONES ---
 
   return (
     <AuthContext.Provider
@@ -169,9 +176,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         verifyCode,
-        completeLogin, // <-- AÑADIDO
+        completeLogin, // <-- expuesto
         register,
         updateUser,
+        submitVote,
         sessionTimeRemaining
       }}
     >
@@ -187,5 +195,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// LA FUNCIÓN "completeLoginHelper" QUE ESTABA AQUÍ ABAJO DEBE SER ELIMINADA

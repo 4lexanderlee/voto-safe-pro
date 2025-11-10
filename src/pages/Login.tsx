@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-// import { completeLoginHelper } from '@/contexts/AuthContext'; // <-- ELIMINAR ESTA LÍNEA
+// import { completeLoginHelper } from '@/contexts/AuthContext'; // <-- LÍNEA ELIMINADA
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -18,16 +18,14 @@ const Login = () => {
   const [step, setStep] = useState<'credentials' | 'verification'>('credentials');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, verifyCode, completeLogin } = useAuth(); // <-- AÑADIR completeLogin
+  const { login, verifyCode, completeLogin } = useAuth(); // <-- 'completeLogin' AÑADIDO
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const result = await login(dni, pin);
-      
       if (result.success && result.tempCode) {
         setTempCode(result.tempCode);
         setStep('verification');
@@ -56,11 +54,12 @@ const Login = () => {
   const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       if (verifyCode(userCode, tempCode)) {
+        
+        // --- CORRECCIÓN AQUÍ ---
         // const user = completeLoginHelper(dni); // <-- CAMBIAR ESTA LÍNEA
-        const user = completeLogin(dni); // <-- POR ESTA LÍNEA
+        const user = completeLogin(dni);     // <-- POR ESTA LÍNEA
         
         if (user) {
           toast({
@@ -68,7 +67,6 @@ const Login = () => {
             description: `Bienvenido ${user.nombre}`,
           });
           
-          // Navigate based on role
           if (user.role === 'admin') {
             navigate('/admin');
           } else {
@@ -100,7 +98,6 @@ const Login = () => {
           <ArrowLeft className="h-4 w-4" />
           Volver al inicio
         </Link>
-
         <Card className="border-2">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
@@ -131,7 +128,6 @@ const Login = () => {
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="pin">PIN (4 dígitos)</Label>
                   <div className="flex justify-center">
@@ -150,19 +146,16 @@ const Login = () => {
                     </InputOTP>
                   </div>
                 </div>
-
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Continuar
                 </Button>
-
                 <div className="text-center text-sm">
                   <span className="text-muted-foreground">¿No tienes cuenta? </span>
                   <Link to="/register" className="text-primary hover:underline font-medium">
                     Regístrate aquí
                   </Link>
                 </div>
-
                 <div className="bg-secondary/50 border border-border rounded-md p-3 text-xs text-muted-foreground">
                   <p className="font-semibold mb-1">Usuarios de prueba:</p>
                   <p>Ciudadano: DNI 12345678, PIN 1234</p>
@@ -180,7 +173,6 @@ const Login = () => {
                     (En producción se enviaría por SMS o correo)
                   </p>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="code">Código de Verificación</Label>
                   <div className="flex justify-center">
@@ -199,7 +191,6 @@ const Login = () => {
                     </InputOTP>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
                   <Button
                     type="button"

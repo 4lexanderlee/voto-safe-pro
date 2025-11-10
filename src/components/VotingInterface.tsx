@@ -4,18 +4,17 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockElection } from '@/lib/mockData';
-import { Vote } from '@/types';
+import { Election, Vote } from '@/types'; // <-- CAMBIO: Election añadido
 import { CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Este componente recibe una función para notificar al padre que el voto se completó.
 interface VotingInterfaceProps {
+  election: Election; // <-- CAMBIO: Recibe la elección completa
   onVoteSubmitted: () => void;
 }
 
-const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
-  const { user, updateUser } = useAuth();
+const VotingInterface = ({ election, onVoteSubmitted }: VotingInterfaceProps) => {
+  const { user, submitVote } = useAuth(); // <-- CAMBIO: submitVote
   const { toast } = useToast();
   const [selectedVotes, setSelectedVotes] = useState<Record<string, string>>({});
 
@@ -27,7 +26,8 @@ const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
   };
 
   const handleSubmitVote = () => {
-    if (Object.keys(selectedVotes).length !== mockElection.categorias.length) {
+    // CAMBIO: Lógica de validación actualizada
+    if (election.requireAllCategories && Object.keys(selectedVotes).length !== election.categorias.length) {
       toast({
         variant: 'destructive',
         title: 'Votación incompleta',
@@ -36,15 +36,15 @@ const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
       return;
     }
 
-    if (!user) return; // Verificación de usuario
+    if (!user) return;
 
-    // Save vote
+    // CAMBIO: Lógica de guardado actualizada
     const vote: Vote = {
       userId: user.dni,
-      electionId: mockElection.id,
+      electionId: election.id, // <-- CAMBIO
       fecha: new Date().toISOString(),
       votos: Object.entries(selectedVotes).map(([categoria, candidatoId]) => {
-        const cat = mockElection.categorias.find(c => c.id === categoria);
+        const cat = election.categorias.find(c => c.id === categoria);
         const candidate = cat?.candidatos.find(c => c.id === candidatoId);
         return {
           categoria,
@@ -54,16 +54,9 @@ const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
       })
     };
 
-    // Save to localStorage
-    const existingVotes = localStorage.getItem('votes');
-    const votes = existingVotes ? JSON.parse(existingVotes) : [];
-    votes.push(vote);
-    localStorage.setItem('votes', JSON.stringify(votes));
-
-    // Update user status
-    updateUser({ hasVoted: true });
+    // CAMBIO: Llamar a la nueva función del contexto
+    submitVote(vote);
     
-    // Notificar al componente padre
     onVoteSubmitted(); 
 
     toast({
@@ -74,7 +67,8 @@ const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
 
   return (
     <div className="space-y-8">
-      {mockElection.categorias.map((categoria) => (
+      {/* CAMBIO: Mapea sobre las categorías de la elección recibida */}
+      {election.categorias.map((categoria) => (
         <div key={categoria.id} className="space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-bold text-foreground">{categoria.nombre}</h3>
@@ -118,12 +112,15 @@ const VotingInterface = ({ onVoteSubmitted }: VotingInterfaceProps) => {
           </div>
         </div>
       ))}
+      
+      {/* TODO: Aquí se podría añadir la lógica de "Voto Nulo" si 'election.allowNullVote' es true */}
 
       <div className="flex justify-end pt-6">
         <Button
           size="lg"
           onClick={handleSubmitVote}
-          disabled={Object.keys(selectedVotes).length !== mockElection.categorias.length}
+          // CAMBIO: Lógica de deshabilitado actualizada
+          disabled={election.requireAllCategories && Object.keys(selectedVotes).length !== election.categorias.length}
         >
           Enviar Voto
         </Button>

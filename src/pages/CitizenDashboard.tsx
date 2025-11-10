@@ -6,41 +6,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-// import { mockElection } from '@/lib/mockData'; // Ya no se necesita aquí
-// import { Vote } from '@/types'; // Ya no se necesita aquí
-import { Shield, LogOut, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-// import { useToast } from '@/hooks/use-toast'; // Ya no se necesita aquí
+import { mockElection } from '@/lib/mockData';
+import { Election } from '@/types'; // <-- CAMBIO
+import { Shield, LogOut, Clock, CheckCircle2, AlertCircle, FileText, Calendar, BarChart3 } from 'lucide-react'; // <-- CAMBIO
 import ChatBot from '@/components/ChatBot';
 import TermsModal from '@/components/TermsModal';
-import VotingInterface from '@/components/VotingInterface'; // <-- IMPORTAR
-import VoteCompletedMessage from '@/components/VoteCompletedMessage'; // <-- IMPORTAR
+import VotingInterface from '@/components/VotingInterface';
+import VoteCompletedMessage from '@/components/VoteCompletedMessage';
 
 const CitizenDashboard = () => {
-  const { user, logout, sessionTimeRemaining } = useAuth(); // Se quita updateUser
+  const { user, logout, sessionTimeRemaining } = useAuth();
   const navigate = useNavigate();
-  // const { toast } = useToast(); // Se quita toast
-  // const [selectedVotes, setSelectedVotes] = useState<Record<string, string>>({}); // Se quita selectedVotes
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [elections, setElections] = useState<Election[]>([]);
+  
+  // CAMBIO: Controla qué elección se está votando
+  const [selectedElection, setSelectedElection] = useState<Election | null>(null);
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
+    
+    // Cargar elecciones desde localStorage
+    const storedElections = localStorage.getItem('elections');
+    setElections(storedElections ? JSON.parse(storedElections) : [mockElection]);
 
     const termsAccepted = localStorage.getItem('termsAccepted');
     if (!termsAccepted) {
       setShowTerms(true);
     }
-
-    if (user.hasVoted) {
-      setHasSubmitted(true);
-    }
   }, [user, navigate]);
 
-  // Se elimina handleVoteSelection
-  // Se elimina handleSubmitVote
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -48,12 +46,77 @@ const CitizenDashboard = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!user) return null;
+  const handleVoteSubmission = () => {
+    // Cuando el voto se envía, volvemos a la lista
+    setSelectedElection(null);
+  };
 
+  if (!user) return null;
+  
+  // --- VISTA DE VOTACIÓN ---
+  if (selectedElection) {
+    const hasVotedInThis = user.votedIn.includes(selectedElection.id);
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+        {/* Header (se mantiene igual) */}
+        <header /* ... */ >
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-8 w-8 text-primary" />
+                <div>
+                  <h1 className="text-xl font-bold text-primary">Voto Safe</h1>
+                  <p className="text-xs text-muted-foreground">Portal del Ciudadano</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-mono text-foreground">{formatTime(sessionTimeRemaining)}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={logout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Salir
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        {/* Contenido de Votación */}
+        <div className="container mx-auto px-4 pb-8 py-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedElection.nombre}</CardTitle>
+              <CardDescription>
+                Selecciona un candidato por cada categoría electoral
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasVotedInThis ? (
+                <VoteCompletedMessage />
+              ) : (
+                <VotingInterface 
+                  election={selectedElection} 
+                  onVoteSubmitted={handleVoteSubmission} 
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        <ChatBot />
+        <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
+      </div>
+    );
+  }
+
+  // --- VISTA DE LISTA DE ELECCIONES (POR DEFECTO) ---
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header (se mantiene igual) */}
+      <header /* ... */ >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -63,7 +126,6 @@ const CitizenDashboard = () => {
                 <p className="text-xs text-muted-foreground">Portal del Ciudadano</p>
               </div>
             </div>
-            
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -89,39 +151,68 @@ const CitizenDashboard = () => {
                 </h2>
                 <p className="text-muted-foreground">DNI: {user.dni}</p>
               </div>
-              {hasSubmitted ? (
-                <Badge className="bg-success text-success-foreground">
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  Voto Registrado
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="border-warning text-warning">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  Pendiente de votar
-                </Badge>
-              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Voting Section */}
+      {/* CAMBIO: Lista de Elecciones */}
       <div className="container mx-auto px-4 pb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Elecciones Generales 2025</CardTitle>
-            <CardDescription>
-              Selecciona un candidato por cada categoría electoral
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {hasSubmitted ? (
-              <VoteCompletedMessage /> // <-- USAR COMPONENTE
-            ) : (
-              <VotingInterface onVoteSubmitted={() => setHasSubmitted(true)} /> // <-- USAR COMPONENTE
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Elecciones Disponibles</h2>
+          {elections.filter(e => e.activa).length > 0 ? (
+            elections.filter(e => e.activa).map(election => {
+              const hasVoted = user.votedIn.includes(election.id);
+              return (
+                <button
+                  key={election.id}
+                  className="w-full border-2 border-primary/20 rounded-lg p-5 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40 transition-colors text-left"
+                  onClick={() => setSelectedElection(election)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="font-bold text-lg">{election.nombre}</h3>
+                    {hasVoted ? (
+                      <Badge className="bg-success/10 text-success hover:bg-success/20">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Completado
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-warning text-warning hover:bg-warning/20">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Pendiente
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground block text-xs">Tipo</span>
+                        <span className="font-medium">{election.tipo}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground block text-xs">Categorías</span>
+                        <span className="font-medium">{election.categorias.length} categorías</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 col-span-2 md:col-span-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground block text-xs">Fecha</span>
+                        <span className="font-medium">{election.fechaInicio} al {election.fechaFin}</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <p className="text-muted-foreground">No hay elecciones activas en este momento.</p>
+          )}
+        </div>
       </div>
 
       <ChatBot />

@@ -67,7 +67,10 @@ function useUsers() {
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { activeTab } = useOutletContext<AdminContextType>();
+  // useOutletContext puede fallar si el componente se renderiza fuera de un Outlet;
+  // por seguridad, aceptamos que el contexto pueda ser nulo y proporcionamos un valor por defecto.
+  const outletContext = useOutletContext<AdminContextType | null>();
+  const activeTab = outletContext?.activeTab ?? 'estadisticas';
   
   const [searchTerm, setSearchTerm] = useState('');
   const [adminHasVoted, setAdminHasVoted] = useState(user?.votedIn || []);
